@@ -7,6 +7,7 @@ import Calendar from 'primevue/calendar';
 import InputNumber from 'primevue/inputnumber';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
+import axios from 'axios';
 
 const user = usePage().props.auth.user
 
@@ -38,7 +39,7 @@ const props = defineProps({
 })
 
 // function for registration
-const Registration = async () => {
+const Registration = () => {
     const formData = {
         fullname: fullname.value,
         position: position.value,
@@ -48,43 +49,43 @@ const Registration = async () => {
         skill_sets: skillSets.value.map(skill => skill.id)
     };
 
-    try {
-        await router.post('/registration/store', formData);
-        const page = usePage()
-        if (page.props.flash.success) {
+    axios.post('/api/registration/store', formData)
+        .then(function (response) {
             Swal.fire({
-                title: 'Berhasil',
-                text: page.props.flash.success,
-                icon: 'success',
-            });
-            resetData();
-        } else if (page.props.errors) {
-            let errorMessages = []
-            for (const key in page.props.errors) {
-                if (Object.hasOwnProperty.call(page.props.errors, key)) {
-                    const errorMessage = page.props.errors[key];
-                    errorMessages.push(errorMessage)
-                }
+                    title: 'Berhasil',
+                    text: response.data.message,
+                    icon: 'success',
+                });
+        })
+        .catch(function (error) {
+            if (error.response && error.response.data && error.response.data.errors) {
+                var concatenatedErrorMessages = ""
+                Object.keys(error.response.data.errors).forEach(function (key) {
+                    var errorArray = error.response.data.errors[key]
+                    if (Array.isArray(errorArray)) {
+                        concatenatedErrorMessages += errorArray.join('\n') + '\n'
+                    } else {
+                        concatenatedErrorMessages += errorArray + '\n'
+                    }
+                });
+                Swal.fire({
+                    title: 'Terjadi Kesalahan',
+                    text: concatenatedErrorMessages,
+                    icon: 'warning',
+                })
+            } else {
+                Swal.fire({
+                    title: 'Terjadi Kesalahan',
+                    text: 'An unexpected error occurred.',
+                    icon: 'error',
+                });
             }
-            const concatenatedErrorMessages = errorMessages.join('\n');
-            Swal.fire({
-                title: 'Terjadi Kesalahan',
-                text: concatenatedErrorMessages,
-                icon: 'warning',
-            });
-        }
-    } catch (error) {
-        let errorMessage = 'Terjadi kesalahan pada server.';
-        Swal.fire({
-            title: 'Terjadi Kesalahan',
-            text: errorMessage,
-            icon: 'error',
-        });
-    }
+        })
 }
 </script>
 
 <template>
+
     <Head title="Welcome" />
 
     <div
@@ -98,7 +99,7 @@ const Registration = async () => {
 
             <div class="mt-10">
                 <div class="bg-white rounded-xl w-[400px] py-2">
-                    <form @submit.prevent="Registration()">
+                    <form action="/api/registration/store" method="POST" @submit.prevent="Registration()">
                         <div class="flex flex-col m-5 gap-2">
                             <label for="name" class="text-md font-semibold text-gray-700 ">Nama Lengkap</label>
                             <input type="text" v-model="fullname"
@@ -144,8 +145,8 @@ const Registration = async () => {
                         <div class="m-5">
                             <label for="name" class="text-md font-semibold text-gray-700 ">Skill Set</label>
                             <div class="mt-2">
-                                <MultiSelect v-model="skillSets" display="chip" :options="props.skills" optionLabel="name"
-                                    placeholder="Pilih skill" :maxSelectedLabels="3"
+                                <MultiSelect v-model="skillSets" display="chip" :options="props.skills"
+                                    optionLabel="name" placeholder="Pilih skill" :maxSelectedLabels="3"
                                     class="w-full border border-gray-300 rounded-md" />
                             </div>
                         </div>
@@ -182,7 +183,3 @@ const Registration = async () => {
     color: #d1d5db;
 }
 </style>
-
-
-
-
